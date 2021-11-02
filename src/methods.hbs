@@ -1,0 +1,175 @@
+
+import React, { useRef, useState } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
+import axios, {AxiosResponse} from 'axios';
+import getConfig from 'next/config';
+import {useTranslation} from "next-i18next";
+import useTranslationLgs from "../hooks/i18n/useTranslation";
+import {Toast} from "primereact/toast";
+
+interface ApiContextType {
+idToken?: string;
+{{#each methods}}
+    {{this.name}}: ({{#generateMethodSignature this.inputObjects this.outputObject}}{{/generateMethodSignature}}) => void;
+{{/each}}
+  loading: string[];
+}
+
+export const ApiContext = React.createContext<ApiContextType>(undefined);
+
+const resolveQueryParams = (params: any[]) => {
+    const retObject = {};
+    params.forEach(item=>{
+      Object.keys(item).forEach(key=>{
+         retObject[key] = item[key];
+      });
+    });
+
+    return retObject;
+}
+
+interface Error {
+  message: string;
+  name: string;
+  stack: string;
+  config: {
+    url: string;
+    method: string;
+    data: string;
+    headers: { [key: string]: string };
+  };
+}
+
+interface Callbacks {
+    onError?: (error: Error) => void;
+    onConflict?: (conflictInfo: any) => void;
+}
+
+export const Provider: React.FC = ({ children }) => {
+  const { getIdTokenClaims } = useAuth0();
+  const { publicRuntimeConfig } = getConfig();
+  const backendUrl = publicRuntimeConfig.FRONTENDSERVICE_PUBLIC_ENDPOINT;
+  const { i18n } = useTranslation('common');
+  const toastRef = useRef(null);
+  const { tr } = useTranslationLgs();
+  const [loading, setLoading] = useState([]);
+
+  const handleError = (error: Error, payload?: any) => {
+    console.log(`error: ${JSON.stringify(error)}`);
+    toastRef.current.show([
+      {
+        severity: 'error',
+        life: 15000,
+        sticky: true,
+        closable: true,
+        content: (
+          <div className="toast-wrapper">
+            <h3>{tr(`api.errorApi`, `Nastala chyba při komunikaci s API`)}</h3>
+            <div>{error.message}</div>
+            <div>
+              {error.config.method} - {error.config.url}
+            </div>
+            <div>Payload </div>
+            <div>
+              <pre className="long-error-pre">{JSON.stringify(payload, null, 2)}</pre>
+            </div>
+            <pre>{error.stack}</pre>
+          </div>
+        ),
+      },
+    ]);
+  };
+
+  const isSuccess = (response: AxiosResponse) => {
+    return response.status >= 200 && response.status < 300 && response.data.errorType === null
+  }
+
+  const isConflict = (response: AxiosResponse) => {
+    if (response.status >= 200 && response.status < 300 && response.data.errorType === "CONFLICT") {
+        return true;
+    }
+    return false;
+  }
+
+
+  const apiMethods = {
+    {{#each methods}}
+        {{this.name}}: ({{#generateMethodSignatureImpl this.inputObjects this.outputObject}}{{/generateMethodSignatureImpl}}):void => {
+        {{#unless this.isPublic}}
+            if (hashAuthentication) {
+            console.log(`Sending {{this.method}} -> ${backendUrl}{{#prepareURI this.uri}}{{/prepareURI}}, with data: ${JSON.stringify({{#printDataOfPresentOrEmpty this.inputObjects this.method}}{{/printDataOfPresentOrEmpty}})}`);
+            setLoading([...loading, "{{this.name}}"]);
+            axios
+            .{{this.method}}(`${backendUrl}{{#prepareURI this.uri}}{{/prepareURI}}`, {{#generateDataIfPresent this.inputObjects this.method}}{{/generateDataIfPresent}} {
+            headers: {
+            'Accept-Language': i18n.language,
+            {{#unless this.isPublic}} Authorization: `Hash ${hashAuthentication}`,  {{/unless}}
+            },
+            params: resolveQueryParams({{#addPageParamsIfPresent this.inputObjects}}{{/addPageParamsIfPresent}}),
+            })
+            .then((response) => {
+                if (isSuccess(response)) {
+                   // @ts-ignore
+                   onSuccess(response.data.payload);
+
+                }
+                if (isConflict(response)) {
+                    if (typeof callbacks.onConflict === 'function') {
+                        callbacks.onConflict(response.data.payload.entity);
+                    }
+                }
+                setLoading(loading.filter(t=>t!== "{{this.name}}"));
+            })
+            .catch((error)=>{
+                if (typeof callbacks.onError === 'function') {
+                    callbacks.onError(error);
+                } else
+                handleError(error, {{#printDataOfPresentOrEmpty this.inputObjects this.method}}{{/printDataOfPresentOrEmpty}});
+                setLoading(loading.filter(t=>t!== "{{this.name}}"));
+            })
+            } else
+            getIdTokenClaims().then((res) => { {{/unless}}
+            console.log(`Sending {{this.method}} -> ${backendUrl}{{#prepareURI this.uri}}{{/prepareURI}}, with data: ${JSON.stringify({{#printDataOfPresentOrEmpty this.inputObjects this.method}}{{/printDataOfPresentOrEmpty}})}`);
+            setLoading([...loading, "{{this.name}}"]);
+            axios
+                .{{this.method}}(`${backendUrl}{{#prepareURI this.uri}}{{/prepareURI}}`, {{#generateDataIfPresent this.inputObjects this.method}}{{/generateDataIfPresent}} {
+                    headers: {
+                    'Accept-Language': i18n.language,
+        {{#unless this.isPublic}} Authorization: `Bearer ${res.__raw}`,  {{/unless}}
+                    },
+                    params: resolveQueryParams({{#addPageParamsIfPresent this.inputObjects}}{{/addPageParamsIfPresent}}),
+                })
+                .then((response) => {
+                    if (isSuccess(response)) {
+                        // @ts-ignore
+                        onSuccess(response.data.payload);
+                        }
+                    if (isConflict(response)) {
+                        if (typeof callbacks.onConflict === 'function') {
+                            callbacks.onConflict(response.data.payload.entity);
+                        }
+                    }
+                    setLoading(loading.filter(t=>t!== "{{this.name}}"));
+                })
+                .catch((error)=>{
+                    if (typeof callbacks.onError === 'function') {
+                        callbacks.onError(error);
+                    } else
+                    handleError(error, {{#printDataOfPresentOrEmpty this.inputObjects this.method}}{{/printDataOfPresentOrEmpty}});
+                    setLoading(loading.filter(t=>t!== "{{this.name}}"));
+                })
+        {{#unless this.isPublic}} }); {{/unless}}
+        },
+    {{/each}}
+    loading
+  };
+
+  return (
+    <ApiContext.Provider value={apiMethods}>
+      <>
+        {children}
+        <Toast ref={toastRef} position={'bottom-left'} />{' '}
+      </>
+    </ApiContext.Provider>
+  );
+};

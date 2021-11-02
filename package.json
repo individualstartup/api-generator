@@ -1,0 +1,45 @@
+{
+  "name": "handlergenerator",
+  "version": "1.0.0",
+  "main": "./dist/index.js",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc -p .",
+    "watch": "tsc -w",
+    "pretest": "npm run build -- --noEmit",
+    "test": "npm run tslint",
+    "test-ci": "npm test",
+    "tslint": "tslint --project . --config ./tslint.json && echo Successfully passed tslint test.",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist",
+    "@types",
+    "**/*.md",
+    "*.js",
+    "!*.config.js"
+  ],
+  "dependencies": {
+    "@types/fs-extra": "^5.0.0",
+    "@types/handlebars": "^4.0.36",
+    "@types/js-yaml": "^4.0.0",
+    "@types/yargs": "^10.0.1",
+    "fast-glob": "^1.0.1",
+    "fs-extra": "^5.0.0",
+    "handlebars": "^4.0.11",
+    "openapi-types": "^7.2.3",
+    "simplr-logger": "^1.0.1",
+    "swagger-axios-codegen": "^0.11.14",
+    "swagger-typescript-codegen": "^1.10.5",
+    "typescript": "3.9",
+    "yargs": "^10.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^14.14.28",
+    "simplr-tslint": "0.0.1",
+    "tslint": "^5.8.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

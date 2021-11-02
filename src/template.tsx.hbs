@@ -1,0 +1,92 @@
+import React from 'react';
+import { {{handler.name}}View, {{handler.name}}InitialData } from './types';
+import { useImmerReducer } from 'use-immer';
+import {Draft} from "immer";
+import {
+  {{#joinDefinition handler.methods}}
+  {{/joinDefinition}}
+
+} from './actionImplementation';
+{{#each handler.types}}
+{{#importDataTypes @this}}{{/importDataTypes}}
+{{/each}}
+import { getLog } from 'utils/utils';
+
+
+const log = getLog('{{handler.name}}Reducer', 'anonymous');
+
+export const {{handler.name}}Context = React.createContext<{{handler.name}}ContextType>(undefined);
+enum  {{handler.name}}Actions {
+{{#each handler.methods}}
+    {{#toEnum @key}}{{/toEnum}} = '{{#toEnum @key}}{{/toEnum}}',
+{{/each}}
+}
+
+interface {{handler.name}}Action {
+  type: {{handler.name}}Actions;
+  payload: any;
+}
+
+
+
+interface {{handler.name}}ContextType {
+  state: {{handler.name}}View;
+  {{#each handler.methods}}
+  {{@key}}: ({{#generateMethodSignature this.params}}{{/generateMethodSignature}}) => void;
+  {{/each}}
+}
+
+const {{handler.name}}Reducer = (
+  draft: Draft<{{handler.name}}View>,
+  action: {{handler.name}}Action
+): {{handler.name}}View => {
+  switch (action.type) {
+{{#each handler.methods }}
+    case {{@root.handler.name}}Actions.{{#toEnum @key}}{{/toEnum}}: {
+{{#each this.params}}
+      const {{@key}} = action.payload.{{@key}};
+{{/each}}
+      log(`Calling handler: ${action.type} with payload: ${JSON.stringify(action.payload, null, 2)}`);
+      {{@key}}(draft, {{#generateParams this.params}}{{/generateParams}});
+      return;
+    }
+{{/each}}
+  }
+}
+
+interface ComponentProps {
+  initialData: {{handler.name}}View;
+}
+
+export const {{handler.name}}Provider: React.FC<ComponentProps> = ({ children, initialData }) => {
+  const [state, dispatch] = useImmerReducer({{handler.name}}Reducer, initialData);
+  const callBacks = {
+    state,
+    {{#each handler.methods}}
+    {{@key}}: ({{#generateMethodSignature this.params}}{{/generateMethodSignature}}) => {
+        dispatch({type: {{@root.handler.name}}Actions.{{#toEnum @key}}{{/toEnum}}, payload: {{#generatePayloadParams this.params}}{{/generatePayloadParams}} });
+    },
+    {{/each}}
+  };
+
+  return <{{handler.name}}Context.Provider value={callBacks}>{children}</{{handler.name}}Context.Provider>;
+}
+
+/*
+
+        You have define {{handler.name}}View in ./types.tsx and initial data.
+
+export interface {{handler.name}}View {
+}
+
+export const {{handler.name}}InitialData: {{handler.name}}View = {
+}
+
+        You have to implement in actionImplementation.tsx this actions:
+
+{{#each handler.methods}}
+export const {{@key}} = (draft: Draft<{{@root.handler.name}}View>, {{#generateMethodSignature this.params}}{{/generateMethodSignature}}) => {
+}
+
+{{/each}}
+*/
