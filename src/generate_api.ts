@@ -117,6 +117,11 @@ const toJavascriptType = (type: any): string => {
             }
             return "string";
         }
+        case "object":
+            return "any";
+        // FIXME: hack
+        case "array":
+            return "string[]";
         default:
             return type || 'UNKNOWN';
     }
@@ -136,6 +141,8 @@ const resolveType = (propertyName : string, newEnums: any[], definition?: Refere
         newEnums.push(enumObject);
     }
 
+
+
     if (isReferenceObject(definition)) {
         // dereference
         return definition.$ref.replace('#/components/schemas/', '');
@@ -143,6 +150,7 @@ const resolveType = (propertyName : string, newEnums: any[], definition?: Refere
         // @ts-ignore
         if (definition.items.$ref !== undefined) {
             const type = isEnum ? enumName : ((definition as ArraySchemaObject).items as ReferenceObject).$ref.replace('#/components/schemas/', '');
+            console.log(`1. Processing ${propertyName}, ${type}`);
             if (type === "array") {
                 return `string[][]`;
             } else  {
@@ -152,11 +160,14 @@ const resolveType = (propertyName : string, newEnums: any[], definition?: Refere
             if (isEnum)
                 `${enumName}[]`;
             // @ts-ignore
+            console.log(`2. Processing ${propertyName}, ${definition.items.type}`);
+            // @ts-ignore
             return `${toJavascriptType(definition.items.type)}[]`;
         }
     } else if (isNonArraySchemaObject(definition)) {
         if (isEnum)
             return enumName;
+        console.log(`3. Processing ${propertyName}, ${definition.type}`);
         return toJavascriptType(definition.type);
     }
 
@@ -216,8 +227,9 @@ const resolveOutputType = (response200 : any): DataClassField | undefined => {
                 return {name: "data", type: `${schema.items.type}[]`, optional: false};
             }
         }
-        if (schema.type === "object")
+        if (schema.type === "object") {
             return {name: "data", type: `any`, optional: false};
+        }
     }
 
     return {name: "data", type: `any`, optional: false};
@@ -333,6 +345,22 @@ interface Method {
     isPublic: boolean;
 }
 
+const generateName = (fileName : string) => {
+    const f= fileName.substring(fileName.lastIndexOf("/") + 1);
+    console.log(f);
+    return `${f.substring(0, f.lastIndexOf("."))}.tsx`;
+}
+
+const generateModuleName = (fileName : string) => {
+    const f= fileName.substring(fileName.lastIndexOf("/") + 1);
+    console.log(f);
+    const fname = `${f.substring(0, f.indexOf("."))}`;
+    return fname.split("-").map(i=>i.charAt(0).toUpperCase()+i.substring(1)).join("")
+}
+
+
+
+
 const processFile = async (file: string) => {
 
     const api: Document = parseApi(file);
@@ -348,9 +376,14 @@ const processFile = async (file: string) => {
         " * contact @Miloslav Vlach\n" +
         " */";
 
-    fs.writeFileSync('api.tsx', `${comment}\n\n\n ${dataClasses.join('\n')} \n\n\n ${methodTemplate({
+    const imports = "import axios, { AxiosResponse } from 'axios';\n" +
+        "import { GetIdTokenClaimsOptions, IdToken } from '@auth0/auth0-spa-js';"
+
+    fs.writeFileSync(generateName(file), `${comment}\n${imports}\n\n ${dataClasses.join('\n')} \n\n\n ${methodTemplate({
         methods: methods,
-        url: api?.servers?.[0]?.url || ''
+        url: api?.servers?.[0]?.url || '',
+        moduleName: generateModuleName(file).charAt(0).toLowerCase()+generateModuleName(file).substring(1),
+        ModuleName: generateModuleName(file)
     })}`);
 }
 
