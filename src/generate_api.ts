@@ -137,7 +137,6 @@ const resolveType = (propertyName : string, newEnums: any[], definition?: Refere
     const enumObject = {enumName: enumName, values: definition.enum || []};
 
     if (isEnum) {
-        console.log(`isEnum = true, ${JSON.stringify({definition, propertyName}, null, 2)}`);
         newEnums.push(enumObject);
     }
 
@@ -150,7 +149,7 @@ const resolveType = (propertyName : string, newEnums: any[], definition?: Refere
         // @ts-ignore
         if (definition.items.$ref !== undefined) {
             const type = isEnum ? enumName : ((definition as ArraySchemaObject).items as ReferenceObject).$ref.replace('#/components/schemas/', '');
-            console.log(`1. Processing ${propertyName}, ${type}`);
+            /*console.log(`1. Processing ${propertyName}, ${type}`);*/
             if (type === "array") {
                 return `string[][]`;
             } else  {
@@ -160,14 +159,14 @@ const resolveType = (propertyName : string, newEnums: any[], definition?: Refere
             if (isEnum)
                 `${enumName}[]`;
             // @ts-ignore
-            console.log(`2. Processing ${propertyName}, ${definition.items.type}`);
+            /*console.log(`2. Processing ${propertyName}, ${definition.items.type}`);*/
             // @ts-ignore
             return `${toJavascriptType(definition.items.type)}[]`;
         }
     } else if (isNonArraySchemaObject(definition)) {
         if (isEnum)
             return enumName;
-        console.log(`3. Processing ${propertyName}, ${definition.type}`);
+        /*console.log(`3. Processing ${propertyName}, ${definition.type}`);*/
         return toJavascriptType(definition.type);
     }
 
@@ -252,7 +251,7 @@ const parseSchema = (dataClasses: any[], api: Document) => {
             // @ts-ignore
             dataClasses.push(`export enum ${entry.enumName} { ${entry.values.map(t=>`${t}='${t}'`).join(',')} }`);
         })
-    console.log(`Enums: ${JSON.stringify(newEnums, null, 2)}`);
+    /*console.log(`Enums: ${JSON.stringify(newEnums, null, 2)}`);*/
 }
 
 const resolveInputObjects = (definition: any, dataClasses: any[]): Parameter[] => {
@@ -278,7 +277,7 @@ const resolveInputObjects = (definition: any, dataClasses: any[]): Parameter[] =
         inParams.forEach(a => params.push(a));
     }
 
-    const body = definition?.requestBody?.content['application/json']?.schema?.$ref;
+    const body = definition?.requestBody?.content['application/json']?.schema?.$ref || definition?.requestBody?.content['application/json']?.schema?.type;
 
     if (body !== undefined) {
         const ret: Parameter = {
@@ -347,13 +346,13 @@ interface Method {
 
 const generateName = (fileName : string) => {
     const f= fileName.substring(fileName.lastIndexOf("/") + 1);
-    console.log(f);
+    /*console.log(f);*/
     return `${f.substring(0, f.lastIndexOf("."))}.tsx`;
 }
 
 const generateModuleName = (fileName : string) => {
     const f= fileName.substring(fileName.lastIndexOf("/") + 1);
-    console.log(f);
+    /*console.log(f);*/
     const fname = `${f.substring(0, f.indexOf("."))}`;
     return fname.split("-").map(i=>i.charAt(0).toUpperCase()+i.substring(1)).join("")
 }
@@ -370,7 +369,9 @@ const processFile = async (file: string) => {
     parseSchema(dataClasses, api);
     const methods: Method[] = parseMethods(api, dataClasses);
 
-    const methodsTest = methods.filter((_, index) => index < 3);
+/*    const methodsTest = methods.filter((m, index) => m.name === "cuCreateExpeditionTemplate");
+    console.log(JSON.stringify(methodsTest, null, 2));*/
+
     const comment = "/**\n" +
         " * THIS FILE IS GENERATED, DO NOT MODIFY THEM...\n" +
         " * contact @Miloslav Vlach\n" +
