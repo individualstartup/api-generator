@@ -4,7 +4,6 @@ export interface {{this.ModuleName}}Type {
 {{#each methods}}
     {{this.name}}: ({{#generateMethodSignature this.inputObjects this.outputObject}}{{/generateMethodSignature}}) => void;
 {{/each}}
-  loading: string[];
 }
 
 const resolveQueryParams = (params: any[]) => {
@@ -72,8 +71,6 @@ const validationFailed = (response: AxiosResponse) => {
 
 export const {{this.moduleName}}Generator = (
 backendUrl: string,
-setLoading: (value: any[]) => void,
-loading: any[],
 i18n: any,
 handleError: (error: Error, payload?) => any,
 getIdTokenClaims: (options?: GetIdTokenClaimsOptions) => Promise<IdToken>,
@@ -87,7 +84,6 @@ getIdTokenClaims: (options?: GetIdTokenClaimsOptions) => Promise<IdToken>,
         {{#unless this.isPublic}}
             if (hashAuthentication) {
             console.log(`Sending {{this.method}} -> ${backendUrl}{{#prepareURI this.uri}}{{/prepareURI}}, with data: ${JSON.stringify({{#printDataOfPresentOrEmpty this.inputObjects this.method}}{{/printDataOfPresentOrEmpty}})}`);
-            setLoading([...loading, "{{this.name}}"]);
             axios
             .{{this.method}}(`${backendUrl}{{#prepareURI this.uri}}{{/prepareURI}}`, {{#generateDataIfPresent this.inputObjects this.method}}{{/generateDataIfPresent}} {
             headers: {
@@ -124,19 +120,19 @@ getIdTokenClaims: (options?: GetIdTokenClaimsOptions) => Promise<IdToken>,
                         callbacks.onEntityNotFound(response.data.payload);
                     }
                 }
-                setLoading(loading.filter(t=>t!== "{{this.name}}"));
+                 
             })
             .catch((error)=>{
                 if (typeof callbacks.onError === 'function') {
                     callbacks.onError(error);
                 } else
                 handleError(error, {{#printDataOfPresentOrEmpty this.inputObjects this.method}}{{/printDataOfPresentOrEmpty}});
-                setLoading(loading.filter(t=>t!== "{{this.name}}"));
+                 
             })
             } else
             getIdTokenClaims().then((res) => { {{/unless}}
             console.log(`Sending {{this.method}} -> ${backendUrl}{{#prepareURI this.uri}}{{/prepareURI}}, with data: ${JSON.stringify({{#printDataOfPresentOrEmpty this.inputObjects this.method}}{{/printDataOfPresentOrEmpty}})}`);
-            setLoading([...loading, "{{this.name}}"]);
+             
             axios
                 .{{this.method}}(`${backendUrl}{{#prepareURI this.uri}}{{/prepareURI}}`, {{#generateDataIfPresent this.inputObjects this.method}}{{/generateDataIfPresent}} {
                     headers: {
@@ -172,19 +168,18 @@ getIdTokenClaims: (options?: GetIdTokenClaimsOptions) => Promise<IdToken>,
                             callbacks.onEntityNotFound(response.data.payload);
                         }
                     }
-                    setLoading(loading.filter(t=>t!== "{{this.name}}"));
+                     
                 })
                 .catch((error)=>{
                     if (typeof callbacks.onError === 'function') {
                         callbacks.onError(error);
                     } else
                     handleError(error, {{#printDataOfPresentOrEmpty this.inputObjects this.method}}{{/printDataOfPresentOrEmpty}});
-                    setLoading(loading.filter(t=>t!== "{{this.name}}"));
+                     
                 })
         {{#unless this.isPublic}} }); {{/unless}}
         },
     {{/each}}
-    loading
   };
 
     return apiMethods;
