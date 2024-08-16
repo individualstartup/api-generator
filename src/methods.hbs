@@ -6,8 +6,8 @@ export interface {{this.ModuleName}}Type {
 {{/each}}
 }
 
-const resolveQueryParams = (params: any[]) => {
-    const retObject = {trcRequestDate: new Date().toISOString(), trcUUID: generateUUID()};
+const resolveQueryParams = (params: any[], runAs? : string) => {
+    const retObject = {trcRequestDate: new Date().toISOString(), trcUUID: generateUUID(), runAs: runAs !== undefined ? runAs : null};
     params.forEach(item=>{
       Object.keys(item).forEach(key=>{
          retObject[key] = item[key];
@@ -80,7 +80,7 @@ const validationFailed = (response: AxiosResponse) => {
 export const {{this.moduleName}}Generator = (
 backendUrl: string,
 i18n: any,
-handleError: (error: Error, payload?) => any,
+handleError: (methodName : String, error: Error, payload?) => any,
 getIdTokenClaims: (options?: GetIdTokenClaimsOptions) => Promise<IdToken>,
     router : any,
     ): {{this.ModuleName}}Type => {
@@ -88,7 +88,7 @@ getIdTokenClaims: (options?: GetIdTokenClaimsOptions) => Promise<IdToken>,
   const apiMethods = {
     {{#each methods}}
         {{this.name}}: ({{#generateMethodSignatureImpl this.inputObjects this.outputObject}}{{/generateMethodSignatureImpl}}):void => {
-        const slugs = router.query["slugs"];
+        const runAs = router.query["runAs"];
         {{#unless this.isPublic}}
             if (hashAuthentication) {
             console.log(`Sending {{this.method}} -> ${backendUrl}{{#prepareURI this.uri}}{{/prepareURI}}, with data: ${JSON.stringify({{#printDataOfPresentOrEmpty this.inputObjects this.method}}{{/printDataOfPresentOrEmpty}})}`);
@@ -98,7 +98,7 @@ getIdTokenClaims: (options?: GetIdTokenClaimsOptions) => Promise<IdToken>,
             'Accept-Language': i18n.language,
             {{#unless this.isPublic}} Authorization: `Hash ${hashAuthentication}`,  {{/unless}}
             },
-            params: resolveQueryParams({{#addPageParamsIfPresent this.inputObjects}}{{/addPageParamsIfPresent}}),
+            params: resolveQueryParams({{#addPageParamsIfPresent this.inputObjects}}{{/addPageParamsIfPresent}}, runAs),
             })
             .then((response) => {
                 if (isSuccess(response)) {
@@ -134,7 +134,7 @@ getIdTokenClaims: (options?: GetIdTokenClaimsOptions) => Promise<IdToken>,
                 if (typeof callbacks.onError === 'function') {
                     callbacks.onError(error);
                 } else
-                handleError(error, {{#printDataOfPresentOrEmpty this.inputObjects this.method}}{{/printDataOfPresentOrEmpty}});
+                handleError('{{this.name}}', error, {{#printDataOfPresentOrEmpty this.inputObjects this.method}}{{/printDataOfPresentOrEmpty}});
                  
             })
             } else
@@ -147,7 +147,7 @@ getIdTokenClaims: (options?: GetIdTokenClaimsOptions) => Promise<IdToken>,
                     'Accept-Language': i18n.language,
         {{#unless this.isPublic}} Authorization: `Bearer ${res?.__raw}`,  {{/unless}}
                     },
-                    params: resolveQueryParams({{#addPageParamsIfPresent this.inputObjects}}{{/addPageParamsIfPresent}}),
+                    params: resolveQueryParams({{#addPageParamsIfPresent this.inputObjects}}{{/addPageParamsIfPresent}}, runAs),
                 })
                 .then((response) => {
                     if (isSuccess(response)) {
@@ -182,7 +182,7 @@ getIdTokenClaims: (options?: GetIdTokenClaimsOptions) => Promise<IdToken>,
                     if (typeof callbacks.onError === 'function') {
                         callbacks.onError(error);
                     } else
-                    handleError(error, {{#printDataOfPresentOrEmpty this.inputObjects this.method}}{{/printDataOfPresentOrEmpty}});
+                    handleError('{{this.name}}', error, {{#printDataOfPresentOrEmpty this.inputObjects this.method}}{{/printDataOfPresentOrEmpty}});
                      
                 })
         {{#unless this.isPublic}} }); {{/unless}}
