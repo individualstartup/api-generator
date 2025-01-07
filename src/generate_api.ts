@@ -388,8 +388,8 @@ const processFile = async (file: string) => {
         " * contact @Miloslav Vlach\n" +
         " */";
 
-    const imports = "import axios, { AxiosResponse } from 'axios';\n" +
-        "import { GetIdTokenClaimsOptions, IdToken } from '@auth0/auth0-spa-js';";
+    const imports = "import axios, { AxiosResponse, ParamsSerializerOptions } from 'axios';\nimport qs from 'qs';\n" +
+        "import { IdToken } from '@auth0/auth0-spa-js';";
 
     fs.writeFileSync(generateName(file), `${comment}\n${imports}\n\n ${dataClasses.join("\n")} \n\n\n ${methodTemplate({
         methods: methods,

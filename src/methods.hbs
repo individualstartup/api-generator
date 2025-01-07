@@ -10,6 +10,7 @@ const resolveQueryParams = (params: any[], runAs? : string) => {
     const retObject = {trcRequestDate: new Date().toISOString(), trcUUID: generateUUID(), runAs: runAs !== undefined ? runAs : null};
     params.forEach(item=>{
       Object.keys(item).forEach(key=>{
+         // @ts-ignore
          retObject[key] = item[key];
       });
     });
@@ -80,15 +81,14 @@ const validationFailed = (response: AxiosResponse) => {
 export const {{this.moduleName}}Generator = (
 backendUrl: string,
 i18n: any,
-handleError: (methodName : String, error: Error, payload?) => any,
-getIdTokenClaims: (options?: GetIdTokenClaimsOptions) => Promise<IdToken>,
-    router : any,
+handleError: (methodName : string, error: Error, payload? : any) => any,
+getIdTokenClaims: (options?: any) => Promise<IdToken>,
+    runAs: string,
     ): {{this.ModuleName}}Type => {
 
   const apiMethods = {
     {{#each methods}}
         {{this.name}}: ({{#generateMethodSignatureImpl this.inputObjects this.outputObject}}{{/generateMethodSignatureImpl}}):void => {
-        const runAs = router.query["runAs"];
         {{#unless this.isPublic}}
             if (hashAuthentication) {
             console.log(`Sending {{this.method}} -> ${backendUrl}{{#prepareURI this.uri}}{{/prepareURI}}, with data: ${JSON.stringify({{#printDataOfPresentOrEmpty this.inputObjects this.method}}{{/printDataOfPresentOrEmpty}})}`);
@@ -99,6 +99,10 @@ getIdTokenClaims: (options?: GetIdTokenClaimsOptions) => Promise<IdToken>,
             {{#unless this.isPublic}} Authorization: `Hash ${hashAuthentication}`,  {{/unless}}
             },
             params: resolveQueryParams({{#addPageParamsIfPresent this.inputObjects}}{{/addPageParamsIfPresent}}, runAs),
+            paramsSerializer: (params: Record<string, any>, options?: ParamsSerializerOptions) => {
+                return qs.stringify(params, {arrayFormat: 'repeat'})
+            },
+
             })
             .then((response) => {
                 if (isSuccess(response)) {
@@ -148,6 +152,9 @@ getIdTokenClaims: (options?: GetIdTokenClaimsOptions) => Promise<IdToken>,
         {{#unless this.isPublic}} Authorization: `Bearer ${res?.__raw}`,  {{/unless}}
                     },
                     params: resolveQueryParams({{#addPageParamsIfPresent this.inputObjects}}{{/addPageParamsIfPresent}}, runAs),
+                    paramsSerializer: (params: Record<string, any>, options?: ParamsSerializerOptions) => {
+                        return qs.stringify(params, {arrayFormat: 'repeat'})
+                    },
                 })
                 .then((response) => {
                     if (isSuccess(response)) {
